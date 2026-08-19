@@ -1,14 +1,47 @@
+# .NET
+**/bin/
+**/obj/
+
+# Visual Studio / Rider
+.vs/
+.idea/
+*.user
+*.suo
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Local configuration containing secrets
+appsettings.Local.json
+appsettings.Production.json
+
+# User secrets
+secrets.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Node
 node_modules/
 .next/
 dist/
 build/
-bin/
-obj/
-.env
-.env.*
-!.env.example
-*.log
-coverage/
-.vscode/
-.idea/
-.DS_Store
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Docker
+docker-compose.override.yml
+
+# Local .NET development configuration
+apps/api/appsettings.Development.json
