@@ -89,4 +89,10 @@ app.UseHttpsRedirection();
 
 app.MapControllers();
 
+app.MapGet("/health", () => Results.Ok(new
+{
+    status = "healthy",
+    service = "VIRENZA API"
+}));
+
 app.Run();
