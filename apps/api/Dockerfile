@@ -15,10 +15,10 @@ RUN dotnet publish Virenza.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 
-ENV ASPNETCORE_URLS=http://+:10000
+ENV ASPNETCORE_URLS=http://+:8080
 
 COPY --from=build /app/publish .
 
-EXPOSE 10000
+EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "Virenza.Api.dll"]
