@@ -1,12 +1,12 @@
 services:
-  - type: web
-    name: virenza-web
-    runtime: node
-    rootDir: apps/web
-    buildCommand: npm ci && npm run build
-    startCommand: npm start
-    envVars:
-      - key: NODE_VERSION
-        value: 20
-      - key: VIRENZA_API_URL
-        sync: false
+- type: web
+  name: virenza-web
+  runtime: node
+  rootDir: apps/web
+  buildCommand: npm ci --include=dev && npm run build
+  startCommand: npm start
+  envVars:
+  - key: NODE_VERSION
+    value: 20
+  - key: VIRENZA_API_URL
+    sync: false
