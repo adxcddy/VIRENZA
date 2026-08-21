@@ -25,10 +25,20 @@ public sealed class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
-    [AllowAnonymous]
     public async Task<ActionResult<AuthResponse>> Login(LoginRequest request)
     {
-        return Ok(await _authService.LoginAsync(request));
+        try
+        {
+            var response = await _authService.LoginAsync(request);
+            return Ok(response);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized(new
+            {
+                message = "Invalid email or password."
+            });
+        }
     }
 
     [HttpGet("me")]

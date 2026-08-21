@@ -72,10 +72,15 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<VirenzaDbContext>();
 
-    await db.Database.EnsureCreatedAsync();
+    await db.Database.MigrateAsync();
 
     await VirenzaEducationSeed.SeedAsync(db);
     await VirenzaCurriculumSeed.SeedAsync(db);
+
+    if (app.Environment.IsDevelopment())
+    {
+        await VirenzaLearningSeed.SeedAsync(db);
+    }
 }
 
 
@@ -85,10 +90,6 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseHttpsRedirection();
-}
 
 app.MapControllers();
 

@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: virenza-api
+    runtime: docker
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      - key: Jwt__Secret
+        generateValue: true
+
+      - key: Jwt__Issuer
+        value: VIRENZA
+
+      - key: Jwt__Audience
+        value: VIRENZA.Platform
+
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: virenza-db
+          property: connectionString
+
+  - type: web
+    name: virenza-web
+    runtime: node
+    rootDir: apps/web
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    healthCheckPath: /
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: VIRENZA_API_URL
+        value: https://virenza-api.onrender.com
+
+databases:
+  - name: virenza-db
+    databaseName: virenza
+    user: virenza

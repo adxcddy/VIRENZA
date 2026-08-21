@@ -1,21 +1,30 @@
 services:
+
   postgres:
     image: postgres:17
     container_name: virenza-postgres
     restart: unless-stopped
+
     environment:
-      POSTGRES_DB: virenza
-      POSTGRES_USER: virenza
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     ports:
       - "5434:5432"
+
     volumes:
       - virenza_postgres_data:/var/lib/postgresql/data
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U virenza -d virenza"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"
+        ]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
 
 volumes:
   virenza_postgres_data:
