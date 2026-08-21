@@ -1,12 +1,61 @@
+databases:
+  - name: virenza-db
+    databaseName: virenza
+    user: virenza
+    plan: basic-256mb
+
 services:
-- type: web
-  name: virenza-web
-  runtime: node
-  rootDir: apps/web
-  buildCommand: npm ci --include=dev && npm run build
-  startCommand: npm start
-  envVars:
-  - key: NODE_VERSION
-    value: 20
-  - key: VIRENZA_API_URL
-    sync: false
+
+  # ============================================================
+  # VIRENZA API
+  # ============================================================
+  - type: web
+    name: virenza-api
+    runtime: docker
+    plan: free
+
+    dockerfilePath: ./apps/api/Dockerfile
+    dockerContext: .
+
+    healthCheckPath: /health
+
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+
+      - key: Jwt__Secret
+        generateValue: true
+
+      - key: Jwt__Issuer
+        value: VIRENZA
+
+      - key: Jwt__Audience
+        value: VIRENZA.Platform
+
+      - key: ConnectionStrings__DefaultConnection
+        fromDatabase:
+          name: virenza-db
+          property: connectionString
+
+  # ============================================================
+  # VIRENZA WEB
+  # ============================================================
+  - type: web
+    name: virenza-web
+    runtime: node
+    plan: free
+
+    rootDir: apps/web
+
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+
+      - key: VIRENZA_API_URL
+        fromService:
+          type: web
+          name: virenza-api
+          envVarKey: RENDER_EXTERNAL_URL
