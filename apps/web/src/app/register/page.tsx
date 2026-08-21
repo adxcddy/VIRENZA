@@ -1,8 +1,10 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { saveAuth } from "@/lib/auth";
+import { getStoredUser } from "@/lib/auth";
+import { register } from "@/lib/api";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -12,14 +14,21 @@ export default function RegisterPage() {
     lastName: "",
     email: "",
     password: "",
-    country: "",
-    learningGoal: "",
   });
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  function updateField(field: keyof typeof form, value: string) {
+  useEffect(() => {
+    if (getStoredUser()) {
+      router.replace("/dashboard");
+    }
+  }, [router]);
+
+  function updateField(
+    field: keyof typeof form,
+    value: string,
+  ) {
     setForm((current) => ({
       ...current,
       [field]: value,
@@ -30,25 +39,21 @@ export default function RegisterPage() {
     event.preventDefault();
 
     setError("");
+
+    if (form.password.length < 8) {
+      setError("Password must contain at least 8 characters.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const response = await fetch("/api/backend/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Registration failed.");
-      }
-
-      const data = await response.json();
-
-      saveAuth(data);
+      await register(
+        form.firstName,
+        form.lastName,
+        form.email,
+        form.password,
+      );
 
       router.replace("/dashboard");
     } catch (err) {
@@ -65,7 +70,7 @@ export default function RegisterPage() {
   return (
     <main className="min-h-screen bg-slate-950 px-6 py-12 text-white">
       <div className="mx-auto max-w-2xl">
-        <a href="/" className="mb-8 inline-flex items-center gap-3">
+        <Link href="/" className="mb-8 inline-flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white font-black text-slate-950">
             V
           </div>
@@ -76,7 +81,7 @@ export default function RegisterPage() {
               Learn Without Limits
             </div>
           </div>
-        </a>
+        </Link>
 
         <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-7 shadow-2xl sm:p-9">
           <h1 className="text-3xl font-black">Create your account</h1>
@@ -86,7 +91,10 @@ export default function RegisterPage() {
           </p>
 
           {error && (
-            <div className="mt-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <div
+              role="alert"
+              className="mt-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300"
+            >
               {error}
             </div>
           )}
@@ -94,13 +102,19 @@ export default function RegisterPage() {
           <form onSubmit={handleSubmit} className="mt-7 space-y-5">
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-300">
+                <label
+                  htmlFor="firstName"
+                  className="mb-2 block text-sm font-semibold text-slate-300"
+                >
                   First name
                 </label>
 
                 <input
+                  id="firstName"
                   value={form.firstName}
-                  onChange={(e) => updateField("firstName", e.target.value)}
+                  onChange={(e) =>
+                    updateField("firstName", e.target.value)
+                  }
                   required
                   autoComplete="given-name"
                   className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 outline-none focus:border-white/30"
@@ -108,13 +122,19 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-300">
+                <label
+                  htmlFor="lastName"
+                  className="mb-2 block text-sm font-semibold text-slate-300"
+                >
                   Last name
                 </label>
 
                 <input
+                  id="lastName"
                   value={form.lastName}
-                  onChange={(e) => updateField("lastName", e.target.value)}
+                  onChange={(e) =>
+                    updateField("lastName", e.target.value)
+                  }
                   required
                   autoComplete="family-name"
                   className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 outline-none focus:border-white/30"
@@ -123,14 +143,20 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-300">
+              <label
+                htmlFor="register-email"
+                className="mb-2 block text-sm font-semibold text-slate-300"
+              >
                 Email
               </label>
 
               <input
+                id="register-email"
                 type="email"
                 value={form.email}
-                onChange={(e) => updateField("email", e.target.value)}
+                onChange={(e) =>
+                  updateField("email", e.target.value)
+                }
                 required
                 autoComplete="email"
                 className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 outline-none focus:border-white/30"
@@ -138,14 +164,20 @@ export default function RegisterPage() {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-300">
+              <label
+                htmlFor="register-password"
+                className="mb-2 block text-sm font-semibold text-slate-300"
+              >
                 Password
               </label>
 
               <input
+                id="register-password"
                 type="password"
                 value={form.password}
-                onChange={(e) => updateField("password", e.target.value)}
+                onChange={(e) =>
+                  updateField("password", e.target.value)
+                }
                 required
                 minLength={8}
                 autoComplete="new-password"
@@ -155,37 +187,6 @@ export default function RegisterPage() {
               <p className="mt-2 text-xs text-slate-500">
                 Minimum 8 characters.
               </p>
-            </div>
-
-            <div className="grid gap-5 sm:grid-cols-2">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-300">
-                  Country
-                </label>
-
-                <input
-                  value={form.country}
-                  onChange={(e) => updateField("country", e.target.value)}
-                  autoComplete="country-name"
-                  placeholder="Uganda"
-                  className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 outline-none focus:border-white/30"
-                />
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-300">
-                  Learning goal
-                </label>
-
-                <input
-                  value={form.learningGoal}
-                  onChange={(e) =>
-                    updateField("learningGoal", e.target.value)
-                  }
-                  placeholder="e.g. Cybersecurity"
-                  className="w-full rounded-xl border border-white/10 bg-black/20 px-4 py-3 outline-none focus:border-white/30"
-                />
-              </div>
             </div>
 
             <button
@@ -199,12 +200,12 @@ export default function RegisterPage() {
 
           <div className="mt-7 text-center text-sm text-slate-400">
             Already have an account?{" "}
-            <a
+            <Link
               href="/login"
               className="font-bold text-white hover:underline"
             >
               Sign in
-            </a>
+            </Link>
           </div>
         </div>
       </div>

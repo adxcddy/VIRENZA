@@ -38,7 +38,7 @@ export function saveAuth(response: AuthResponse) {
   );
 }
 
-export function getToken() {
+export function getToken(): string | null {
   if (typeof window === "undefined") return null;
   return localStorage.getItem(TOKEN_KEY);
 }
@@ -64,11 +64,20 @@ export function clearAuth() {
   localStorage.removeItem(USER_KEY);
 }
 
-export function authHeaders() {
+export function logout() {
+  clearAuth();
+  window.location.href = "/login";
+}
+
+export function authHeaders(): Record<string, string> {
   const token = getToken();
 
   return {
     "Content-Type": "application/json",
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+}
+
+export function isAuthenticated(): boolean {
+  return Boolean(getToken());
 }
