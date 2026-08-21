@@ -1,46 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { apiFetch } from "@/lib/api";
-import { getToken } from "@/lib/auth";
+import { useParams } from "next/navigation";
+import {
+  enrollCourse,
+  getCourse,
+  type CourseDetails,
+} from "@/lib/api";
 
-type Lesson = {
-  id: string;
-  title: string;
-  summary?: string | null;
-  contentType: string;
-  estimatedMinutes: number;
-  order: number;
-};
-
-type Module = {
-  id: string;
-  title: string;
-  description?: string | null;
-  order: number;
-  lessons: Lesson[];
-};
-
-type Course = {
-  id: string;
-  title: string;
-  slug: string;
-  description?: string | null;
-  difficulty: string;
-  estimatedHours: number;
-  isFree: boolean;
-  modules: Module[];
-};
-
-export default function CourseDetailsPage() {
+export default function CoursePage() {
   const params = useParams();
-  const router = useRouter();
+  const courseId = String(params.courseId);
 
-  const courseId = params.courseId as string;
-
-  const [course, setCourse] = useState<Course | null>(null);
+  const [course, setCourse] = useState<CourseDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [enrolling, setEnrolling] = useState(false);
   const [error, setError] = useState("");
@@ -49,10 +22,7 @@ export default function CourseDetailsPage() {
   useEffect(() => {
     async function load() {
       try {
-        const data = await apiFetch<Course>(
-          `/learning/courses/${courseId}`,
-        );
-
+        const data = await getCourse(courseId);
         setCourse(data);
       } catch (err) {
         setError(
@@ -65,30 +35,25 @@ export default function CourseDetailsPage() {
       }
     }
 
-    if (courseId) load();
+    load();
   }, [courseId]);
 
-  async function enroll() {
-    if (!getToken()) {
-      router.push(`/login?returnTo=/courses/${courseId}`);
-      return;
-    }
-
-    setEnrolling(true);
-    setError("");
-    setMessage("");
-
+  async function handleEnroll() {
     try {
-      await apiFetch(`/learning/courses/${courseId}/enroll`, {
-        method: "POST",
-      });
+      setEnrolling(true);
+      setError("");
+      setMessage("");
 
-      setMessage("You are now enrolled in this course.");
+      await enrollCourse(courseId);
+
+      setMessage(
+        "You are now enrolled in this course.",
+      );
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Unable to enroll in this course.",
+          : "Unable to enroll.",
       );
     } finally {
       setEnrolling(false);
@@ -97,167 +62,150 @@ export default function CourseDetailsPage() {
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 text-slate-400">
-        Loading course...
+      <main className="min-h-screen bg-slate-950 p-10 text-white">
+        <div className="mx-auto max-w-5xl">
+          <div className="h-10 w-2/3 animate-pulse rounded bg-white/10" />
+          <div className="mt-4 h-5 w-1/2 animate-pulse rounded bg-white/10" />
+        </div>
       </main>
     );
   }
 
   if (!course) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-slate-950 text-white">
-        <div className="text-center">
-          <h1 className="text-2xl font-black">Course not found</h1>
+      <main className="min-h-screen bg-slate-950 p-10 text-white">
+        <div className="mx-auto max-w-5xl">
+          <p className="text-red-300">
+            {error || "Course not found."}
+          </p>
           <Link
             href="/courses"
-            className="mt-5 inline-block text-sm font-bold text-slate-400 hover:text-white"
+            className="mt-5 inline-block text-sm font-bold underline"
           >
-            ← Back to courses
+            Back to courses
           </Link>
         </div>
       </main>
     );
   }
 
-  const lessonCount = course.modules.reduce(
-    (total, module) => total + module.lessons.length,
-    0,
-  );
-
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <header className="border-b border-white/10">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-6">
-          <Link href="/courses" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white font-black text-slate-950">
-              V
-            </div>
-            <div className="font-black">VIRENZA</div>
-          </Link>
-
+        <div className="mx-auto max-w-5xl px-6 py-5">
           <Link
-            href="/dashboard"
+            href="/courses"
             className="text-sm font-semibold text-slate-400 hover:text-white"
           >
-            Dashboard
+            ← All courses
           </Link>
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-5 py-10 sm:px-6">
-        <Link
-          href="/courses"
-          className="text-sm font-semibold text-slate-500 hover:text-white"
-        >
-          ← All courses
-        </Link>
-
-        <section className="mt-7 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.04]">
-          <div className="p-7 sm:p-10 lg:p-12">
-            <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-slate-300">
-                {course.difficulty}
-              </span>
-
-              {course.isFree && (
-                <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-xs font-bold text-emerald-400">
-                  Free course
-                </span>
-              )}
-            </div>
-
-            <h1 className="mt-6 max-w-4xl text-4xl font-black tracking-tight sm:text-5xl">
-              {course.title}
-            </h1>
-
-            <p className="mt-5 max-w-3xl text-base leading-8 text-slate-400">
-              {course.description || "Begin your learning journey with VIRENZA."}
-            </p>
-
-            <div className="mt-7 flex flex-wrap gap-5 text-sm text-slate-500">
-              <span>{course.estimatedHours} estimated hours</span>
-              <span>{course.modules.length} modules</span>
-              <span>{lessonCount} lessons</span>
-            </div>
-
-            {error && (
-              <div className="mt-7 max-w-xl rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-                {error}
-              </div>
-            )}
-
-            {message && (
-              <div className="mt-7 max-w-xl rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
-                {message}
-              </div>
-            )}
-
-            <button
-              onClick={enroll}
-              disabled={enrolling}
-              className="mt-8 rounded-xl bg-white px-6 py-3.5 text-sm font-black text-slate-950 hover:bg-slate-200 disabled:opacity-50"
-            >
-              {enrolling ? "Enrolling..." : "Enroll in course →"}
-            </button>
+      <div className="mx-auto max-w-5xl px-6 py-12">
+        {error && (
+          <div className="mb-6 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            {error}
           </div>
-        </section>
+        )}
+
+        {message && (
+          <div className="mb-6 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300">
+            {message}
+          </div>
+        )}
+
+        <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-8">
+          <div className="flex flex-wrap gap-3">
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-slate-400">
+              {course.difficulty}
+            </span>
+
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-slate-400">
+              {course.estimatedHours} hours
+            </span>
+
+            <span className="rounded-full border border-white/10 px-3 py-1 text-xs font-bold text-slate-400">
+              {course.isFree ? "Free" : "Premium"}
+            </span>
+          </div>
+
+          <h1 className="mt-6 text-4xl font-black">
+            {course.title}
+          </h1>
+
+          <p className="mt-4 max-w-3xl leading-7 text-slate-400">
+            {course.description ||
+              "Learn the key concepts and skills in this VIRENZA course."}
+          </p>
+
+          <button
+            onClick={handleEnroll}
+            disabled={enrolling}
+            className="mt-8 rounded-xl bg-white px-6 py-3 font-bold text-slate-950 transition hover:bg-slate-200 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {enrolling ? "Enrolling..." : "Enroll in course"}
+          </button>
+        </div>
 
         <section className="mt-10">
-          <div className="mb-5">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-500">
-              Curriculum
-            </p>
-            <h2 className="mt-1 text-2xl font-black">
-              Course content
-            </h2>
-          </div>
+          <h2 className="text-2xl font-black">
+            Course curriculum
+          </h2>
 
-          <div className="space-y-4">
-            {course.modules.map((module, index) => (
-              <article
+          <div className="mt-5 space-y-4">
+            {course.modules.map((module) => (
+              <div
                 key={module.id}
-                className="rounded-2xl border border-white/10 bg-white/[0.03]"
+                className="rounded-2xl border border-white/10 bg-white/[0.03] p-6"
               >
-                <div className="flex items-start gap-4 p-6">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/10 text-sm font-black">
-                    {index + 1}
-                  </div>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-widest text-slate-600">
+                      Module {module.order}
+                    </div>
 
-                  <div className="min-w-0 flex-1">
-                    <h3 className="font-black">{module.title}</h3>
+                    <h3 className="mt-1 text-lg font-black">
+                      {module.title}
+                    </h3>
 
                     {module.description && (
-                      <p className="mt-2 text-sm leading-6 text-slate-500">
+                      <p className="mt-2 text-sm text-slate-500">
                         {module.description}
                       </p>
                     )}
-
-                    <div className="mt-5 space-y-2">
-                      {module.lessons.map((lesson) => (
-                        <div
-                          key={lesson.id}
-                          className="flex items-center justify-between gap-4 rounded-xl border border-white/5 bg-black/10 px-4 py-3"
-                        >
-                          <div className="min-w-0">
-                            <p className="truncate text-sm font-semibold text-slate-300">
-                              {lesson.title}
-                            </p>
-                            {lesson.summary && (
-                              <p className="mt-1 truncate text-xs text-slate-600">
-                                {lesson.summary}
-                              </p>
-                            )}
-                          </div>
-
-                          <span className="shrink-0 text-xs text-slate-600">
-                            {lesson.estimatedMinutes} min
-                          </span>
-                        </div>
-                      ))}
-                    </div>
                   </div>
+
+                  <span className="text-xs text-slate-600">
+                    {module.lessons.length} lessons
+                  </span>
                 </div>
-              </article>
+
+                <div className="mt-5 space-y-2">
+                  {module.lessons.map((lesson) => (
+                    <Link
+                      key={lesson.id}
+                      href={`/lessons/${lesson.id}`}
+                      className="flex items-center justify-between rounded-xl border border-white/5 bg-black/20 px-4 py-3 transition hover:border-white/20 hover:bg-white/[0.05]"
+                    >
+                      <div>
+                        <div className="text-sm font-semibold">
+                          {lesson.order}. {lesson.title}
+                        </div>
+
+                        <div className="mt-1 text-xs text-slate-600">
+                          {lesson.estimatedMinutes} minutes ·{" "}
+                          {lesson.contentType}
+                        </div>
+                      </div>
+
+                      <span className="text-slate-600">
+                        →
+                      </span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             ))}
           </div>
         </section>

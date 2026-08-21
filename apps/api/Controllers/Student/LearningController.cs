@@ -204,6 +204,132 @@ public class LearningController : ControllerBase
         return Ok(courses);
     }
 
+    // Get a lesson for the authenticated student.
+    // Content is only available to students enrolled in the course.
+    [HttpGet("lessons/{lessonId:guid}")]
+    public async Task<IActionResult> GetLesson(Guid lessonId)
+    {
+        var studentId = GetStudentId();
+
+        if (studentId == null)
+            return Unauthorized();
+
+        var lesson = await _db.Lessons
+            .AsNoTracking()
+            .Where(x =>
+                x.Id == lessonId &&
+                x.IsPublished)
+            .Select(x => new
+            {
+                x.Id,
+                x.ModuleId,
+                x.Title,
+                x.Summary,
+                x.Content,
+                x.ContentType,
+                x.EstimatedMinutes,
+                x.Order,
+
+                Module = _db.Modules
+                    .Where(m =>
+                        m.Id == x.ModuleId &&
+                        m.IsPublished)
+                    .Select(m => new
+                    {
+                        m.Id,
+                        m.CourseId,
+                        m.Title,
+                        m.Order
+                    })
+                    .FirstOrDefault()
+            })
+            .FirstOrDefaultAsync();
+
+        if (lesson == null || lesson.Module == null)
+            return NotFound(new { message = "Lesson not found." });
+
+        var enrollment = await _db.Enrollments
+            .AsNoTracking()
+            .AnyAsync(x =>
+                x.StudentId == studentId.Value &&
+                x.CourseId == lesson.Module.CourseId &&
+                x.IsActive);
+
+        if (!enrollment)
+        {
+            return BadRequest(new
+            {
+                message = "Student is not enrolled in this course."
+            });
+        }
+
+        var progress = await _db.LessonProgress
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.StudentId == studentId.Value &&
+                x.LessonId == lessonId);
+
+        var navigation = await _db.Lessons
+            .AsNoTracking()
+            .Where(x =>
+                x.IsPublished &&
+                _db.Modules.Any(m =>
+                    m.Id == x.ModuleId &&
+                    m.CourseId == lesson.Module.CourseId &&
+                    m.IsPublished))
+            .OrderBy(x => x.ModuleId)
+            .ThenBy(x => x.Order)
+            .Select(x => new
+            {
+                x.Id,
+                x.ModuleId,
+                x.Title,
+                x.Order
+            })
+            .ToListAsync();
+
+        var currentIndex = navigation.FindIndex(x => x.Id == lessonId);
+
+        return Ok(new
+        {
+            lesson.Id,
+            lesson.ModuleId,
+            lesson.Title,
+            lesson.Summary,
+            lesson.Content,
+            lesson.ContentType,
+            lesson.EstimatedMinutes,
+            lesson.Order,
+
+            lesson.Module,
+
+            Progress = progress == null
+                ? new
+                {
+                    ProgressPercent = 0m,
+                    TimeSpentSeconds = 0,
+                    IsCompleted = false,
+                    CompletedAt = (DateTime?)null
+                }
+                : new
+                {
+                    progress.ProgressPercent,
+                    progress.TimeSpentSeconds,
+                    progress.IsCompleted,
+                    progress.CompletedAt
+                },
+
+            PreviousLesson = currentIndex > 0
+                ? navigation[currentIndex - 1]
+                : null,
+
+            NextLesson = currentIndex >= 0 &&
+                         currentIndex < navigation.Count - 1
+                ? navigation[currentIndex + 1]
+                : null
+        });
+    }
+
     // Record lesson progress
     [HttpPost("lessons/{lessonId:guid}/progress")]
     public async Task<IActionResult> UpdateProgress(
