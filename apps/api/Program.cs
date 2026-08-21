@@ -6,6 +6,7 @@ using System.Text;
 using Virenza.Api.Data.Seed;
 using Microsoft.EntityFrameworkCore;
 using Virenza.Api.Data;
+using Virenza.Api.Models.Research;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,11 +78,7 @@ using (var scope = app.Services.CreateScope())
 
     await VirenzaEducationSeed.SeedAsync(db);
     await VirenzaCurriculumSeed.SeedAsync(db);
-
-    if (app.Environment.IsDevelopment())
-    {
-        await VirenzaLearningSeed.SeedAsync(db);
-    }
+    await VirenzaLearningSeed.SeedAsync(db);
 }
 
 if (app.Environment.IsDevelopment())

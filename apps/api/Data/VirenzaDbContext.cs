@@ -7,6 +7,7 @@ using Virenza.Api.Models.Learning;
 using Virenza.Api.Models.Assessment;
 using Virenza.Api.Models.Scholarship;
 using Virenza.Api.Models.Sponsorship;
+using Virenza.Api.Models.Research;
 
 namespace Virenza.Api.Data;
 
@@ -57,6 +58,19 @@ public DbSet<Certificate> Certificates => Set<Certificate>();
     public DbSet<Scholarship> Scholarships => Set<Scholarship>();
     public DbSet<ScholarshipApplication> ScholarshipApplications => Set<ScholarshipApplication>();
     public DbSet<SponsorshipRequest> SponsorshipRequests => Set<SponsorshipRequest>();
+
+    // Research & Global Knowledge
+    // Global research ingestion
+    public DbSet<KnowledgeSource> KnowledgeSources => Set<KnowledgeSource>();
+    public DbSet<ResearchPublication> ResearchPublications => Set<ResearchPublication>();
+    public DbSet<ResearchDataset> ResearchDatasets => Set<ResearchDataset>();
+    public DbSet<ResearchTopic> ResearchTopics => Set<ResearchTopic>();
+
+    // Curated research resources
+    public DbSet<ResearchSource> ResearchSources => Set<ResearchSource>();
+    public DbSet<ResearchResource> ResearchResources => Set<ResearchResource>();
+    public DbSet<ResourceLike> ResourceLikes => Set<ResourceLike>();
+    public DbSet<ResourceBookmark> ResourceBookmarks => Set<ResourceBookmark>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -174,6 +188,86 @@ public DbSet<Certificate> Certificates => Set<Certificate>();
                 .WithMany()
                 .HasForeignKey(x => x.ModuleId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ResearchSource>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Name)
+                .HasMaxLength(250)
+                .IsRequired();
+
+            entity.Property(x => x.WebsiteUrl)
+                .HasMaxLength(1000);
+
+            entity.Property(x => x.CountryCode)
+                .HasMaxLength(10);
+        });
+
+        modelBuilder.Entity<ResearchResource>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Title)
+                .HasMaxLength(500)
+                .IsRequired();
+
+            entity.Property(x => x.Url)
+                .HasMaxLength(2000);
+
+            entity.Property(x => x.ResourceType)
+                .HasMaxLength(100);
+
+            entity.Property(x => x.Language)
+                .HasMaxLength(20);
+
+            entity.Property(x => x.CountryCode)
+                .HasMaxLength(10);
+
+            entity.HasOne(x => x.ResearchSource)
+                .WithMany()
+                .HasForeignKey(x => x.ResearchSourceId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasIndex(x => x.ResearchSourceId);
+            entity.HasIndex(x => x.Subject);
+            entity.HasIndex(x => x.Language);
+            entity.HasIndex(x => x.CountryCode);
+        });
+
+        modelBuilder.Entity<ResourceLike>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.HasOne(x => x.ResearchResource)
+                .WithMany()
+                .HasForeignKey(x => x.ResearchResourceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => new
+            {
+                x.ResearchResourceId,
+                x.UserId
+            })
+            .IsUnique();
+        });
+
+        modelBuilder.Entity<ResourceBookmark>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+
+            entity.HasOne(x => x.ResearchResource)
+                .WithMany()
+                .HasForeignKey(x => x.ResearchResourceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasIndex(x => new
+            {
+                x.ResearchResourceId,
+                x.UserId
+            })
+            .IsUnique();
         });
 
         modelBuilder.Entity<SubscriptionPlan>(entity =>
