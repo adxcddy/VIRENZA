@@ -2,6 +2,7 @@ services:
   - type: web
     name: virenza-api
     runtime: docker
+    plan: free
     dockerfilePath: ./apps/api/Dockerfile
     dockerContext: .
     healthCheckPath: /health
@@ -26,6 +27,7 @@ services:
   - type: web
     name: virenza-web
     runtime: node
+    plan: free
     rootDir: apps/web
     buildCommand: npm ci && npm run build
     startCommand: npm start
@@ -39,5 +41,6 @@ services:
 
 databases:
   - name: virenza-db
+    plan: free
     databaseName: virenza
     user: virenza
