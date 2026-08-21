@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Virenza.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+
 builder.Services.Configure<MtnPaymentOptions>(
     builder.Configuration.GetSection("Payments:MTN"));
 
@@ -22,7 +23,6 @@ builder.Services.AddScoped<IPaymentProvider, AirtelMoneyPaymentProvider>();
 
 builder.Services.AddScoped<PaymentProviderResolver>();
 builder.Services.AddScoped<PaymentService>();
-
 
 var jwtSecret = builder.Configuration["Jwt:Secret"]
     ?? throw new InvalidOperationException("JWT secret is not configured.");
@@ -50,8 +50,10 @@ builder.Services
     });
 
 builder.Services.AddAuthorization();
-builder.Services.AddScoped<Virenza.Api.Services.Auth.IAuthService, Virenza.Api.Services.Auth.AuthService>();
 
+builder.Services.AddScoped<
+    Virenza.Api.Services.Auth.IAuthService,
+    Virenza.Api.Services.Auth.AuthService>();
 
 builder.Services.AddControllers();
 
@@ -66,7 +68,6 @@ var app = builder.Build();
 
 app.UseAuthentication();
 app.UseAuthorization();
-
 
 using (var scope = app.Services.CreateScope())
 {
@@ -83,15 +84,22 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
 
-
 app.MapControllers();
+
+app.MapGet("/", () => Results.Ok(new
+{
+    service = "VIRENZA API",
+    status = "online",
+    version = "1.0",
+    environment = app.Environment.EnvironmentName,
+    health = "/health"
+}));
 
 app.MapGet("/health", () => Results.Ok(new
 {
