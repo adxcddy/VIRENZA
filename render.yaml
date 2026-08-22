@@ -59,3 +59,9 @@ services:
           type: web
           name: virenza-api
           envVarKey: RENDER_EXTERNAL_URL
+
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: virenza-api
+          envVarKey: RENDER_EXTERNAL_URL
